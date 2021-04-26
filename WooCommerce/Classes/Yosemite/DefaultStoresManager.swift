@@ -330,23 +330,6 @@ private extension DefaultStoresManager {
         dispatch(action)
     }
 
-    /// Synchronizes the order statuses, if possible.
-    ///
-    func retrieveOrderStatus(with siteID: Int64) {
-        guard siteID != 0 else {
-            // Just return if the siteID == 0 so we are not making extra requests
-            return
-        }
-
-        let action = OrderStatusAction.retrieveOrderStatuses(siteID: siteID) { (_, error) in
-            if let error = error {
-                DDLogError("⛔️ Could not successfully fetch order statuses for siteID \(siteID): \(error)")
-            }
-        }
-
-        dispatch(action)
-    }
-
     /// Loads the Default Site into the current Session, if possible.
     ///
     func restoreSessionSiteIfPossible() {
@@ -359,7 +342,6 @@ private extension DefaultStoresManager {
             ServiceLocator.selectedSiteSettings.refresh()
             ServiceLocator.shippingSettingsService.update(siteID: siteID)
         }
-        retrieveOrderStatus(with: siteID)
         synchronizePaymentGateways(siteID: siteID)
     }
 
