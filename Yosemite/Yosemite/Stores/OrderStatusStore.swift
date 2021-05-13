@@ -19,6 +19,9 @@ public class OrderStatusStore: Store {
         super.init(dispatcher: dispatcher, storageManager: storageManager, network: network)
     }
 
+    private var lastStatusesUpdateTime: Date?
+    private let validCacheTime: TimeInterval = 10
+
     /// Registers for supported Actions.
     ///
     override public func registerSupportedActions(in dispatcher: Dispatcher) {
@@ -50,10 +53,18 @@ private extension OrderStatusStore {
     /// Retrieves the order statuses associated with the provided Site ID (if any!).
     ///
     func retrieveOrderStatuses(siteID: Int64, onCompletion: @escaping (Result<Void, Error>) -> Void) {
+        if let lastStatusesUpdateTime = lastStatusesUpdateTime, Date().timeIntervalSince(lastStatusesUpdateTime) < validCacheTime {
+            print("LOL returned cache")
+            onCompletion(.success(()))
+            return
+        }
+        print("LOL request the network")
+
         remote.loadOrdersTotals(for: siteID) { result in
             switch result {
             case .success(let orderStatuses):
                 self.upsertStatusesInBackground(siteID: siteID, readOnlyOrderStatuses: orderStatuses) {
+                    self.lastStatusesUpdateTime = Date()
                     onCompletion(.success(()))
                 }
             case .failure(let error):
@@ -65,6 +76,8 @@ private extension OrderStatusStore {
     /// Nukes all of the Stored OrderStatuses.
     ///
     func resetStoredOrderStatuses(onCompletion: () -> Void) {
+        lastStatusesUpdateTime = nil
+
         let storage = storageManager.viewStorage
         storage.deleteAllObjects(ofType: Storage.OrderStatus.self)
         storage.saveIfNeeded()
